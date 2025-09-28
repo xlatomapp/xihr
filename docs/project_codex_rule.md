@@ -8,7 +8,8 @@
 - Allow users to provide data via **CSV, Excel, or database** through adaptors.  
 - Support both **simulation** and **live mode** via a repository pattern.  
 - Provide a **CLI** built with **Typer**.  
-- Manage **settings and configs** with **Pydantic Settings Management**.  
+- Manage **settings and configs** with **Pydantic Settings Management**.
+- Engine should be event driven.
 
 ---
 
@@ -154,5 +155,6 @@ xihr/
 ```
 
 ---
+
 
 
