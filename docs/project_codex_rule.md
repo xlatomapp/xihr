@@ -26,11 +26,9 @@ The engine must support:
 - **Trifecta Exact (三連単)** – pick three horses finishing 1st–3rd exact order.  
 
 ### 2. Normalized Data Model
-Dataclass should be pydantic, hence there could be some data validation done
+Data should be in pandas and they should have below schema. Validation should be done with pydantic and pandera.
 - **Race**
-  ```python
-  @dataclass
-  class Race:
+  Race:
       race_id: str
       date: datetime
       course: str
@@ -38,28 +36,23 @@ Dataclass should be pydantic, hence there could be some data validation done
       ground: str
       weather: str
       horses: List["HorseEntry"]
-  ```
+  
 - **HorseEntry**
-  ```python
-  @dataclass
-  class HorseEntry:
+  HorseEntry:
       horse_id: str
       name: str
       jockey: str
       trainer: str
       odds: Dict[str, float]   # odds by bet type
       draw: int
-  ```
+  
 - **Payoff**
-  ```python
-  @dataclass
-  class Payoff:
+  Payoff:
       race_id: str
       bet_type: str
       combination: Tuple[str]
       odds: float
       payout: float
-  ```
 
 ### 3. Strategy System
 - **BaseStrategy APIs**
@@ -100,7 +93,8 @@ Dataclass should be pydantic, hence there could be some data validation done
 - Report per strategy and bet type.  
 - HTML deshboard for the results.  
 
-### 7. CLI (Typer)
+### 7. CLI 
+- CLI should be implemented using Typer package.
 - Commands:  
   - `xihr run` – run a strategy (sim or live).  
   - `xihr run --live` – run live strategy.  
@@ -160,4 +154,5 @@ xihr/
 ```
 
 ---
+
 
