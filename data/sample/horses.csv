@@ -1,0 +1,7 @@
+race_id,horse_id,name,jockey,trainer,draw,odds
+RACE001,H001,Thunder Road,S. Ito,T. Kato,1,"{""win"":1.9,""place"":1.2}"
+RACE001,H002,Silver Arrow,K. Sato,M. Suzuki,2,"{""win"":4.5,""place"":1.8}"
+RACE001,H003,Night Breeze,Y. Tanaka,S. Watanabe,3,"{""win"":8.0,""place"":2.5}"
+RACE002,H004,Golden Dawn,H. Yamada,H. Inoue,1,"{""win"":2.3,""place"":1.4}"
+RACE002,H005,Crimson Tide,T. Fujita,K. Nakamura,2,"{""win"":5.0,""place"":2.0}"
+RACE002,H006,Ocean Spray,R. Kobayashi,N. Yoshida,3,"{""win"":6.5,""place"":2.3}"

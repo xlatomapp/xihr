@@ -1,0 +1,3 @@
+race_id,date,course,distance,ground,weather
+RACE001,2024-04-01,Tokyo,1600,Turf,Sunny
+RACE002,2024-04-02,Kyoto,2000,Dirt,Cloudy
