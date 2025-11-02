@@ -1,10 +1,18 @@
-"""Top-level package for xihr."""
+"""Japanese horse racing betting engine."""
+from .analytics import KPIReport, generate_report
+from .engine import Engine
+from .portfolio import BetPosition, Portfolio
+from .settings import AppSettings, load_settings
+from .strategy import BaseStrategy
 
-__author__ = """xliu"""
-__email__ = "xlatom1009@gmail.com"
-__version__ = "0.1.0"
-
-from .config import Config
-
-
-all = ["Config"]
+__all__ = [
+    "AppSettings",
+    "BaseStrategy",
+    "BetPosition",
+    "Engine",
+    "KPIReport",
+    "Portfolio",
+    "generate_report",
+    "load_settings",
+]
+"""Public package exports."""

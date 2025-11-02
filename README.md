@@ -27,7 +27,16 @@ Japanese horse racing betting engine, support backtest and live bet
 
 ## Features
 
-* TODO
+* Normalised data model for races, horses, and payoffs validated with Pydantic and Pandera.
+* Repository pattern for simulation and live data/betting environments.
+* Strategy API with scheduling, historical lookup, and bet execution helpers.
+* Typer CLI for running strategies and generating analytics reports.
+* Built-in example strategies (naive favourite and value betting) and sample datasets.
+
+## Examples
+
+A runnable Jupyter notebook that demonstrates a full simulation using the sample
+dataset is available at `notebooks/simulation_demo.ipynb`.
 
 ## Credits
 

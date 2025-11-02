@@ -1,0 +1,7 @@
+race_id,bet_type,combination,odds,payout
+RACE001,win,H001,1.9,190
+RACE001,place,H001-H002-H003,1.0,100
+RACE001,quinella,H001-H002,4.2,420
+RACE002,win,H004,2.3,230
+RACE002,place,H004-H005-H006,1.0,100
+RACE002,quinella,H004-H005,5.5,550
