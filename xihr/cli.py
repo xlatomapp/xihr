@@ -1,4 +1,4 @@
-"""Command line interface for running xihr strategies."""
+"""Command line interface for running simulations and reports."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,10 +8,8 @@ import pandas as pd
 import typer
 import yaml
 
-from .adaptors import CSVDataAdaptor, DBDataAdaptor, ExcelDataAdaptor
 from .analytics import generate_report
 from .engine import Engine
-from .models import to_domain_payoff, to_domain_race
 from .portfolio import Portfolio
 from .repositories import (
     LiveBettingRepository,
@@ -36,7 +34,7 @@ STRATEGIES: Dict[str, Type[BaseStrategy]] = {
 def run(
     *,
     strategy: str = typer.Option("naive_favorite", help="Strategy name"),
-    adaptor: str = typer.Option("csv", help="Data adaptor: csv|excel|db"),
+    data_source: str = typer.Option("csv", help="Data source: csv|excel|db"),
     data: Path = typer.Option(..., exists=False, help="Path to data source"),
     bankroll: float | None = typer.Option(None, help="Override bankroll"),
     config: Path | None = typer.Option(None, help="Optional YAML config file"),
@@ -50,17 +48,17 @@ def run(
 
     portfolio = Portfolio.create(bankroll_value)
 
-    adaptor_instance = _create_adaptor(adaptor or settings.data_source, settings, data)
+    simulation_repository = _create_simulation_repository(
+        data_source or settings.data_source,
+        settings,
+        data,
+    )
 
     if live:
-        data_repository = LiveDataRepository()
-        for race_model in adaptor_instance.load_races():
-            data_repository.register_race(to_domain_race(race_model))
-        for payoff_model in adaptor_instance.load_payoffs():
-            data_repository.register_payoff(to_domain_payoff(payoff_model))
+        data_repository = _prime_live_repository(simulation_repository)
         betting_repository = LiveBettingRepository(portfolio)
     else:
-        data_repository = SimulationDataRepository(adaptor_instance)
+        data_repository = simulation_repository
         betting_repository = SimulationBettingRepository(portfolio, data_repository)
 
     engine = Engine(data_repository, betting_repository)
@@ -101,25 +99,51 @@ def _load_strategy(name: str) -> BaseStrategy:
     return STRATEGIES[key]()
 
 
-def _create_adaptor(adaptor: str, settings: AppSettings, data_path: Path):
-    """Create a data adaptor instance based on CLI options and settings."""
+def _create_simulation_repository(
+    source: str,
+    settings: AppSettings,
+    data_path: Path,
+) -> SimulationDataRepository:
+    """Create a simulation repository based on CLI options and settings."""
 
-    adaptor = adaptor.lower()
-    if adaptor == "csv":
+    choice = source.lower()
+    if choice == "csv":
         path = data_path if data_path.is_dir() else data_path.parent
         if not path.exists():
             raise typer.BadParameter("CSV data directory does not exist")
-        return CSVDataAdaptor(path)
-    if adaptor == "excel":
+        return SimulationDataRepository.from_csv(path)
+    if choice == "excel":
         if not data_path.exists():
             raise typer.BadParameter("Excel workbook does not exist")
-        return ExcelDataAdaptor(data_path)
-    if adaptor == "db":
-        connection = settings.adaptor_settings.connection_url
+        return SimulationDataRepository.from_excel(data_path)
+    if choice == "db":
+        connection = settings.data_source_settings.connection_url
         if not connection:
-            raise typer.BadParameter("Database connection URL must be provided in settings")
-        return DBDataAdaptor(connection)
-    raise typer.BadParameter(f"Unsupported adaptor: {adaptor}")
+            raise typer.BadParameter(
+                "Database connection URL must be provided in settings"
+            )
+        return SimulationDataRepository.from_database(connection)
+    raise typer.BadParameter(f"Unsupported data source: {source}")
+
+
+def _prime_live_repository(
+    simulation_repository: SimulationDataRepository,
+) -> LiveDataRepository:
+    """Populate a live repository with data sourced from simulation inputs."""
+
+    live_repo = LiveDataRepository()
+    for race in simulation_repository.iter_races():
+        live_repo.register_race(race)
+        publish_time = simulation_repository.get_publish_time(race.race_id, "race")
+        if publish_time is not None:
+            live_repo.register_publish_time(race.race_id, "race", publish_time)
+        payoffs = simulation_repository.get_payoffs(race.race_id)
+        for payoff in payoffs:
+            live_repo.register_payoff(payoff)
+        publish_time = simulation_repository.get_publish_time(race.race_id, "payoff")
+        if publish_time is not None:
+            live_repo.register_publish_time(race.race_id, "payoff", publish_time)
+    return live_repo
 
 
 def _load_config(config_path: Path | None) -> AppSettings:

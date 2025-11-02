@@ -1,4 +1,4 @@
-"""Configuration models for xihr applications."""
+"""Application settings and configuration models."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class AdaptorSettings(BaseModel):
-    """Settings for configuring data adaptors."""
+class DataSourceSettings(BaseModel):
+    """Settings for configuring data repositories."""
 
     path: Optional[Path] = None
     """Path to a directory of CSV files."""
@@ -38,9 +38,9 @@ class AppSettings(BaseSettings):
     initial_bankroll: float = 10000.0
     """Default bankroll used when none is provided explicitly."""
     data_source: Literal["csv", "excel", "db"] = "csv"
-    """Adaptor type to load racing data from."""
-    adaptor_settings: AdaptorSettings = Field(default_factory=AdaptorSettings)
-    """Nested adaptor configuration."""
+    """Repository type to load racing data from."""
+    data_source_settings: DataSourceSettings = Field(default_factory=DataSourceSettings)
+    """Nested repository configuration."""
     betting_limits: BettingLimits = Field(default_factory=BettingLimits)
     """Default betting constraints."""
 

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from datetime import UTC, datetime, timedelta
 
-from xihr.adaptors import CSVDataAdaptor
 from xihr.analytics import generate_report
 from xihr.engine import Engine
 from xihr.portfolio import Portfolio
@@ -13,12 +12,16 @@ from strategies import NaiveFavoriteStrategy
 from xihr.strategy import BaseStrategy
 
 
-def test_csv_adaptor_loads_sample_data():
-    """Ensure the CSV adaptor loads races and payoffs from fixtures."""
+def test_csv_repository_loads_sample_data():
+    """Ensure the CSV-backed repository loads races and payoffs from fixtures."""
 
-    adaptor = CSVDataAdaptor(Path("data/sample"))
-    races = adaptor.load_races()
-    payoffs = list(adaptor.load_payoffs())
+    repository = SimulationDataRepository.from_csv(Path("data/sample"))
+    races = list(repository.iter_races())
+    payoffs = [
+        payoff
+        for race in races
+        for payoff in repository.get_payoffs(race.race_id)
+    ]
 
     assert len(races) == 2
     assert all(race.horses for race in races)
@@ -28,8 +31,7 @@ def test_csv_adaptor_loads_sample_data():
 def test_engine_runs_naive_strategy(tmp_path):
     """Execute a strategy end-to-end and confirm results are recorded."""
 
-    adaptor = CSVDataAdaptor(Path("data/sample"))
-    data_repo = SimulationDataRepository(adaptor)
+    data_repo = SimulationDataRepository.from_csv(Path("data/sample"))
     portfolio = Portfolio.create(1000)
     betting_repo = SimulationBettingRepository(portfolio, data_repo)
     engine = Engine(data_repo, betting_repo)
@@ -47,8 +49,7 @@ def test_engine_runs_naive_strategy(tmp_path):
 def test_simulated_clock_advances_with_history():
     """Validate that the simulated clock aligns with historical data."""
 
-    adaptor = CSVDataAdaptor(Path("data/sample"))
-    data_repo = SimulationDataRepository(adaptor)
+    data_repo = SimulationDataRepository.from_csv(Path("data/sample"))
     portfolio = Portfolio.create(1000)
     betting_repo = SimulationBettingRepository(portfolio, data_repo)
     engine = Engine(data_repo, betting_repo)
@@ -75,8 +76,7 @@ def test_simulated_clock_advances_with_history():
 def test_event_driven_tick_and_schedule():
     """Verify that absolute, relative, and cron schedules fire correctly."""
 
-    adaptor = CSVDataAdaptor(Path("data/sample"))
-    data_repo = SimulationDataRepository(adaptor)
+    data_repo = SimulationDataRepository.from_csv(Path("data/sample"))
     portfolio = Portfolio.create(1000)
     betting_repo = SimulationBettingRepository(portfolio, data_repo)
     engine = Engine(data_repo, betting_repo)
@@ -159,9 +159,8 @@ def test_event_driven_tick_and_schedule():
 
 
 def test_engine_schedules_payoff_publication():
-    adaptor = CSVDataAdaptor(Path("data/sample"))
-    data_repo = SimulationDataRepository(
-        adaptor, payoff_publication_delay=timedelta(minutes=45)
+    data_repo = SimulationDataRepository.from_csv(
+        Path("data/sample"), payoff_publication_delay=timedelta(minutes=45)
     )
     portfolio = Portfolio.create(1000)
     betting_repo = SimulationBettingRepository(portfolio, data_repo)

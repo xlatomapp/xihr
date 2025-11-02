@@ -5,7 +5,7 @@
 - Support **all JRA betting patterns** (単勝, 複勝, 枠連, 馬連, 馬単, ワイド, 三連複, 三連単).  
 - Provide a **BaseStrategy** API that allows scheduling, data access, betting, and portfolio management.  
 - Use a **normalized data model** for races, horses, odds, and payoffs.  
-- Allow users to provide data via **CSV, Excel, or database** through adaptors.  
+- Allow users to provide data via **CSV, Excel, or database** repositories.
 - Support both **simulation** and **live mode** via a repository pattern.  
 - Provide a **CLI** built with **Typer**.  
 - Manage **settings and configs** with **Pydantic Settings Management**.  
@@ -67,25 +67,24 @@ Data should be in pandas and they should have below schema. Validation should be
 
 ### 4. Repository Pattern
 - **DataRepository**
-  - Simulation: loads historical data via adaptor.  
+  - Simulation: loads historical data via repository implementation.
   - Live: connects to live API feed.  
 - **BettingRepository**
   - Simulation: simulates payouts.  
   - Live: executes bets with broker/exchange API.  
 - Repositories abstract environment away from strategies.  
 
-### 5. Data Adaptor Layer
-- **Adaptor Interface**
+### 5. Data Repository Implementations
+- **SimulationDataRepository** factories
   ```python
-  class DataAdaptor:
-      def load_races(self) -> List[Race]: ...
-      def load_payoffs(self) -> List[Payoff]: ...
+  class SimulationDataRepository:
+      @classmethod
+      def from_csv(...)
+      def from_excel(...)
+      def from_database(...)
   ```
-- **Implementations**
-  - `CSVDataAdaptor`  
-  - `ExcelDataAdaptor`  
-  - `DBDataAdaptor`  
-- User specifies adaptor via CLI/config.  
+- Implementations normalise raw data into domain models for reuse across the engine.
+- User specifies the repository type via CLI/config.
 
 ### 6. Analytics
 - Basic stats e.g. total races, total races bet.
@@ -99,19 +98,19 @@ Data should be in pandas and they should have below schema. Validation should be
   - `xihr run` – run a strategy (sim or live).  
   - `xihr run --live` – run live strategy.  
   - `xihr report` – generate reports.  
-- Options:  
-  - `--strategy STRATEGY_NAME`  
-  - `--adaptor csv|excel|db`  
-  - `--data PATH`  
+- Options:
+  - `--strategy STRATEGY_NAME`
+  - `--data-source csv|excel|db`
+  - `--data PATH`
   - `--bankroll AMOUNT`  
   - `--config PATH`  
 
 ### 8. Config & Settings
 - Use **Pydantic Settings Management**.  
-- Config schema includes:  
-  - `initial_bankroll`  
-  - `data_source` (csv, excel, db, api)  
-  - `adaptor_settings` (path, db connection, API keys)  
+- Config schema includes:
+  - `initial_bankroll`
+  - `data_source` (csv, excel, db, api)
+  - `data_source_settings` (path, db connection, API keys)
   - `betting_limits`  
 - Config can be loaded from `.env`, YAML, or CLI or env vairiable. 
 
@@ -132,11 +131,6 @@ xihr/
 │   ├── repositories/            # Repository pattern
 │   │   ├── data_repository.py
 │   │   ├── betting_repository.py
-│   ├── adaptors/                # Data adaptors
-│   │   ├── base.py
-│   │   ├── csv_adaptor.py
-│   │   ├── excel_adaptor.py
-│   │   ├── db_adaptor.py
 │   ├── settings.py              # Pydantic settings
 │   └── cli.py                   # Typer CLI
 │
