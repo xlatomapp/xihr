@@ -8,17 +8,18 @@ import pandas as pd
 import typer
 import yaml
 
-from .analytics import generate_report
-from .engine import Engine
-from .portfolio import Portfolio
-from .repositories import (
-    LiveBettingRepository,
+from .backtest.metrics import generate_report
+from .config import AppSettings, load_settings
+from .core.engine import Engine
+from .data.repositories import (
     LiveDataRepository,
-    SimulationBettingRepository,
     SimulationDataRepository,
 )
-from .settings import AppSettings, load_settings
-from .strategy import BaseStrategy
+from .execution.broker import (
+    LiveBettingRepository,
+    SimulationBettingRepository,
+)
+from .strategy import BaseStrategy, Portfolio
 from strategies import NaiveFavoriteStrategy, ValueBettingStrategy
 
 app = typer.Typer(help="Japanese horse racing betting simulator")
@@ -175,9 +176,9 @@ def _write_positions(path: Path, positions) -> None:
 
 
 def portfolio_row_to_position(row: pd.Series):
-    """Convert a CSV row into a :class:`~xihr.portfolio.BetPosition`."""
+    """Convert a CSV row into a :class:`~xihr.strategy.BetPosition`."""
 
-    from xihr.portfolio import BetPosition
+    from xihr.strategy import BetPosition
     from datetime import UTC, datetime
 
     combination_raw = str(row.get("combination", ""))

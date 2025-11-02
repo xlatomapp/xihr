@@ -4,16 +4,17 @@ from __future__ import annotations
 from datetime import UTC, datetime, time, timedelta
 from typing import Callable, Sequence
 
-from .engine import Engine
-from .events import (
+from ..core.engine import Engine
+from ..core.events import (
     BetConfirmationEvent,
     BetRequestEvent,
     DataEvent,
     ResultEvent,
     TimeEvent,
 )
-from .portfolio import BetPosition, Portfolio
-from .repositories import BettingRepository, DataRepository
+from ..data.repositories import DataRepository
+from ..execution.broker import BettingRepository
+from .risk import BetPosition, Portfolio
 
 
 class BaseStrategy:

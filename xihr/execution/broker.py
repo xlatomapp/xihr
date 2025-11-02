@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from ..events import BetConfirmationEvent
-from ..models import Payoff
-from ..portfolio import BetPosition, Portfolio
-from .data_repository import DataRepository
+from ..core.events import BetConfirmationEvent
+from ..data.models import Payoff
+from ..data.repositories import DataRepository
+from ..strategy.risk import BetPosition, Portfolio
 
 
 CANONICAL_BET_TYPES: Dict[str, set[str]] = {

@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-class DataSourceSettings(BaseModel):
+@dataclass(slots=True)
+class DataSourceSettings:
     """Settings for configuring data repositories."""
 
     path: Optional[Path] = None
@@ -20,28 +19,27 @@ class DataSourceSettings(BaseModel):
     """Database connection URL."""
 
 
-class BettingLimits(BaseModel):
+@dataclass(slots=True)
+class BettingLimits:
     """Constraints applied to betting operations."""
 
-    max_stake: float = Field(default=1000.0, ge=0)
+    max_stake: float = 1000.0
     """Maximum stake allowed per bet."""
-    max_exposure: float = Field(default=10000.0, ge=0)
+    max_exposure: float = 10000.0
     """Maximum total exposure allowed across open bets."""
 
 
-class AppSettings(BaseSettings):
+@dataclass(slots=True)
+class AppSettings:
     """Primary configuration object."""
-
-    model_config = SettingsConfigDict(env_prefix="XIHR_", env_nested_delimiter="__")
-    """Pydantic settings configuration for environment variable loading."""
 
     initial_bankroll: float = 10000.0
     """Default bankroll used when none is provided explicitly."""
     data_source: Literal["csv", "excel", "db"] = "csv"
     """Repository type to load racing data from."""
-    data_source_settings: DataSourceSettings = Field(default_factory=DataSourceSettings)
+    data_source_settings: DataSourceSettings = field(default_factory=DataSourceSettings)
     """Nested repository configuration."""
-    betting_limits: BettingLimits = Field(default_factory=BettingLimits)
+    betting_limits: BettingLimits = field(default_factory=BettingLimits)
     """Default betting constraints."""
 
     def ensure_bankroll(self, bankroll: float | None = None) -> float:
@@ -55,6 +53,21 @@ class AppSettings(BaseSettings):
 
 
 def load_settings(**overrides) -> AppSettings:
-    """Load settings merging environment variables and overrides."""
+    """Load settings merging optional overrides."""
 
-    return AppSettings(**overrides)
+    data_source_overrides = overrides.pop("data_source_settings", None)
+    betting_overrides = overrides.pop("betting_limits", None)
+    settings = AppSettings(**overrides)
+    if data_source_overrides is not None:
+        settings.data_source_settings = DataSourceSettings(**data_source_overrides)
+    if betting_overrides is not None:
+        settings.betting_limits = BettingLimits(**betting_overrides)
+    return settings
+
+
+__all__ = [
+    "AppSettings",
+    "BettingLimits",
+    "DataSourceSettings",
+    "load_settings",
+]
