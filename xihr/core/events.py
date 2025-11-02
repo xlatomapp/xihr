@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Sequence
 
-from .models import Payoff, Race
-from .portfolio import BetPosition
+from ..data.models import Payoff, Race
+from ..strategy.risk import BetPosition
 
 
 @dataclass(slots=True)

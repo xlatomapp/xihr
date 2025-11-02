@@ -27,6 +27,58 @@ Japanese horse racing betting engine, support backtest and live bet
 
 ## Features
 
+## Package layout
+
+```text
+xihr/
+  __init__.py
+  cli.py
+  config/
+    __init__.py
+    settings.py
+  core/
+    __init__.py
+    bus.py
+    clock.py
+    engine.py
+    events.py
+    registry.py
+    types.py
+  data/
+    __init__.py
+    models.py
+    providers.py
+    repositories.py
+    transforms.py
+  strategy/
+    __init__.py
+    base.py
+    risk.py
+    rules.py
+  models/
+    __init__.py
+    base.py
+    pipelines.py
+  execution/
+    __init__.py
+    broker.py
+    router.py
+    slippage.py
+  backtest/
+    __init__.py
+    analyzers.py
+    metrics.py
+    simulator.py
+  storage/
+    __init__.py
+    artifacts.py
+    kv.py
+  monitoring/
+    __init__.py
+    health.py
+    logging.py
+```
+
 * Normalised data model for races, horses, and payoffs validated with Pydantic and Pandera.
 * Repository pattern for simulation and live data/betting environments.
 * Strategy API with scheduling, historical lookup, and bet execution helpers.

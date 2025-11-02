@@ -3,15 +3,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime, timedelta
+import csv
+import importlib
 import json
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Literal, Sequence
+from typing import Any, Dict, Iterable, Iterator, List, Literal, Sequence
 
-import pandas as pd
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-
-from ..models import (
+from .models import (
     Payoff,
     PayoffModel,
     Race,
@@ -90,15 +88,22 @@ class SimulationDataRepository(DataRepository):
         """Create a repository from CSV files stored beneath ``base_path``."""
 
         base = Path(base_path)
-        horses_df = _load_csv(base / horses_file, converters={"odds": json.loads})
-        races_df = _load_csv(base / races_file, parse_dates=["date"])
-        payoffs_df = _load_csv(
-            base / payoffs_file, converters={"combination": _parse_combination}
-        )
+        horses_rows = _load_csv(base / horses_file)
+        for row in horses_rows:
+            if "odds" in row and isinstance(row["odds"], str) and row["odds"]:
+                row["odds"] = json.loads(row["odds"])
+        races_rows = _load_csv(base / races_file)
+        payoffs_rows = _load_csv(base / payoffs_file)
+        for row in payoffs_rows:
+            row["combination"] = _parse_combination(str(row.get("combination", "")))
+            if "odds" in row and row["odds"] != "":
+                row["odds"] = float(row["odds"])
+            if "payout" in row and row["payout"] != "":
+                row["payout"] = float(row["payout"])
 
-        horses = validate_and_build_horses(horses_df)
-        races = validate_and_build_races(races_df, horses)
-        payoffs = validate_and_build_payoffs(payoffs_df)
+        horses = validate_and_build_horses(horses_rows)
+        races = validate_and_build_races(races_rows, horses)
+        payoffs = validate_and_build_payoffs(payoffs_rows)
         return cls(
             races,
             payoffs,
@@ -118,17 +123,18 @@ class SimulationDataRepository(DataRepository):
         """Create a repository from an Excel workbook."""
 
         workbook_path = Path(workbook)
-        horses_df = _load_excel(workbook_path, horses_sheet)
-        if "odds" in horses_df.columns:
-            horses_df["odds"] = horses_df["odds"].apply(_ensure_dict)
-        races_df = _load_excel(workbook_path, races_sheet)
-        races_df["date"] = pd.to_datetime(races_df["date"])
-        payoffs_df = _load_excel(workbook_path, payoffs_sheet)
-        payoffs_df["combination"] = payoffs_df["combination"].apply(_convert_combination)
+        horses_rows = _load_excel(workbook_path, horses_sheet)
+        for row in horses_rows:
+            if "odds" in row:
+                row["odds"] = _ensure_dict(row["odds"])
+        races_rows = _load_excel(workbook_path, races_sheet)
+        payoffs_rows = _load_excel(workbook_path, payoffs_sheet)
+        for row in payoffs_rows:
+            row["combination"] = _convert_combination(row.get("combination", ""))
 
-        horses = validate_and_build_horses(horses_df)
-        races = validate_and_build_races(races_df, horses)
-        payoffs = validate_and_build_payoffs(payoffs_df)
+        horses = validate_and_build_horses(horses_rows)
+        races = validate_and_build_races(races_rows, horses)
+        payoffs = validate_and_build_payoffs(payoffs_rows)
         return cls(
             races,
             payoffs,
@@ -138,7 +144,7 @@ class SimulationDataRepository(DataRepository):
     @classmethod
     def from_database(
         cls,
-        engine: str | Engine,
+        engine: str | Any,
         *,
         races_table: str = "races",
         horses_table: str = "horses",
@@ -147,18 +153,26 @@ class SimulationDataRepository(DataRepository):
     ) -> "SimulationDataRepository":
         """Create a repository backed by relational tables."""
 
-        sql_engine: Engine = create_engine(engine) if isinstance(engine, str) else engine
-        horses_df = _load_table(sql_engine, horses_table)
-        if "odds" in horses_df.columns:
-            horses_df["odds"] = horses_df["odds"].apply(_ensure_dict)
-        races_df = _load_table(sql_engine, races_table)
-        races_df["date"] = pd.to_datetime(races_df["date"])
-        payoffs_df = _load_table(sql_engine, payoffs_table)
-        payoffs_df["combination"] = payoffs_df["combination"].apply(_convert_combination)
+        sql_engine = engine
+        if isinstance(engine, str):
+            spec = importlib.util.find_spec("sqlalchemy")
+            if spec is None:  # pragma: no cover - optional dependency missing
+                raise RuntimeError("sqlalchemy is required for database loading")
+            sqlalchemy = importlib.import_module("sqlalchemy")
+            sql_engine = sqlalchemy.create_engine(engine)
 
-        horses = validate_and_build_horses(horses_df)
-        races = validate_and_build_races(races_df, horses)
-        payoffs = validate_and_build_payoffs(payoffs_df)
+        horses_rows = _load_table(sql_engine, horses_table)
+        for row in horses_rows:
+            if "odds" in row:
+                row["odds"] = _ensure_dict(row["odds"])
+        races_rows = _load_table(sql_engine, races_table)
+        payoffs_rows = _load_table(sql_engine, payoffs_table)
+        for row in payoffs_rows:
+            row["combination"] = _convert_combination(row.get("combination", ""))
+
+        horses = validate_and_build_horses(horses_rows)
+        races = validate_and_build_races(races_rows, horses)
+        payoffs = validate_and_build_payoffs(payoffs_rows)
         return cls(
             races,
             payoffs,
@@ -277,28 +291,43 @@ def _ensure_utc(moment: datetime) -> datetime:
     return moment.astimezone(UTC)
 
 
-def _load_csv(path: Path, **kwargs) -> pd.DataFrame:
-    """Load a CSV file from ``path`` into a DataFrame."""
+def _load_csv(path: Path) -> list[dict[str, Any]]:
+    """Load a CSV file from ``path`` into a list of dictionaries."""
 
     if not path.exists():
         msg = f"CSV file not found: {path}"
         raise FileNotFoundError(msg)
-    return pd.read_csv(path, **kwargs)
+    with path.open("r", encoding="utf8") as handle:
+        reader = csv.DictReader(handle)
+        return [dict(row) for row in reader]
 
 
-def _load_excel(path: Path, sheet_name: str) -> pd.DataFrame:
-    """Load an Excel sheet into a DataFrame."""
+def _require_pandas() -> Any:
+    """Return the pandas module if available or raise a helpful error."""
+
+    spec = importlib.util.find_spec("pandas")
+    if spec is None:  # pragma: no cover - optional dependency missing
+        raise RuntimeError("pandas is required for this operation")
+    return importlib.import_module("pandas")
+
+
+def _load_excel(path: Path, sheet_name: str) -> list[dict[str, Any]]:
+    """Load an Excel sheet into a list of dictionaries."""
 
     if not path.exists():
         msg = f"Excel workbook not found: {path}"
         raise FileNotFoundError(msg)
-    return pd.read_excel(path, sheet_name=sheet_name)
+    pd = _require_pandas()
+    frame = pd.read_excel(path, sheet_name=sheet_name)
+    return frame.to_dict(orient="records")  # type: ignore[no-any-return]
 
 
-def _load_table(engine: Engine, table: str) -> pd.DataFrame:
-    """Load an entire SQL table into a DataFrame."""
+def _load_table(engine: Any, table: str) -> list[dict[str, Any]]:
+    """Load an entire SQL table into a list of dictionaries."""
 
-    return pd.read_sql_table(table, engine)
+    pd = _require_pandas()
+    frame = pd.read_sql_table(table, engine)
+    return frame.to_dict(orient="records")  # type: ignore[no-any-return]
 
 
 def _parse_combination(raw: str) -> tuple[str, ...]:
@@ -309,7 +338,7 @@ def _parse_combination(raw: str) -> tuple[str, ...]:
         return tuple()
     if raw.startswith("["):
         try:
-            values = pd.io.json.loads(raw)
+            values = json.loads(raw)
         except ValueError as exc:  # pragma: no cover - defensive fallback
             msg = f"Invalid combination json: {raw}"
             raise ValueError(msg) from exc

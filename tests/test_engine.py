@@ -4,12 +4,12 @@ from pathlib import Path
 
 from datetime import UTC, datetime, timedelta
 
-from xihr.analytics import generate_report
-from xihr.engine import Engine
-from xihr.portfolio import Portfolio
-from xihr.repositories import SimulationBettingRepository, SimulationDataRepository
+from xihr.backtest.metrics import generate_report
+from xihr.core.engine import Engine
+from xihr.data import SimulationDataRepository
+from xihr.execution import SimulationBettingRepository
+from xihr.strategy import BaseStrategy, Portfolio
 from strategies import NaiveFavoriteStrategy
-from xihr.strategy import BaseStrategy
 
 
 def test_csv_repository_loads_sample_data():
